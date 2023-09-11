@@ -61,3 +61,35 @@ def funct_convert_from_mp3_to_wov(var_audio_folder_input_path, var_audio_folder_
     shutil.copy(var_path_in_colab_str, var_audio_folder_output_path)
 
     print('files_wrote to adress: ' + var_audio_folder_output_path + '/' + var_name_output_file_and_wav)
+
+    # putch to folder input
+    var_puth_folder_input_str = '/content/drive/MyDrive/06 App ausk/p_001_audio/p_001_folder_audio_for_train/p_001_train_normal_breath_wav'
+
+    # putch to folder output
+    var_puth_folder_output_str = '/content/sample_data'
+
+def func_convert_wav_44100_to_16000_grz(var_puth_folder_input_str, var_puth_folder_output_str):
+  import os
+  import librosa
+  import soundfile as sf
+
+  # get list file name
+  # Use os.listdir() to get a list of all files and directories in the folder
+  var_name_audio_list = os.listdir(var_puth_folder_input_str)
+
+  # create cycle for
+  for var_name_one_audio_fail_str in var_name_audio_list:
+    # get one file
+    # create variable with puth to file (folder + file)
+    var_full_puth_to_file = var_puth_folder_input_str + '/' + var_name_one_audio_fail_str
+
+    # convert file
+    audio, sr = librosa.load(var_full_puth_to_file, sr=16000)  # Resample to 16,000 Hz
+
+    # create variable with puth to file output (folder + file)
+    var_full_puth_to_file_output_str = var_puth_folder_output_str + '/' + var_name_one_audio_fail_str
+
+    # put in one file to folder
+    # Save the resampled audio as a WAV file
+    sf.write(var_full_puth_to_file_output_str, audio, sr)
+
