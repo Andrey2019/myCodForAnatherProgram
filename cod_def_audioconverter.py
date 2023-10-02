@@ -93,3 +93,158 @@ def func_convert_wav_44100_to_16000_grz(var_puth_folder_input_str, var_puth_fold
     # Save the resampled audio as a WAV file
     sf.write(var_full_puth_to_file_output_str, audio, sr)
 
+def func_preprocesing_audio_to_spectrogram(var_path_one_file_str, test_var):
+  '''convert wav file to 16000 Hz and build spectrogram one file
+  # install libraries
+  !pip install tensorflow_io
+  # Conect to google drive
+  from google.colab import drive
+  drive.mount('/content/drive')
+  # Import packages
+  import os
+  from IPython import display
+  import matplotlib.pyplot as plt
+  import numpy as np
+  import pandas as pd
+  import tensorflow as tf
+  import tensorflow_hub as hub
+  import tensorflow_io as tfio
+  # Put the path from van file
+  var_path_train_normal_breath_wav = '/content/drive/MyDrive/P_001/all_audio_files/p_001_train_normal_breath_wav/1_01Vesicular.wav'
+  var_path_train_not_normal_breath_wav = '/content/drive/MyDrive/P_001/all_audio_files/p_001_train_not_normal_breath_wav/1_02DimVesicular.wav'
+  # Use the path as variable in function
+  test_var = 32000
+  spectr_1 = func_preprocesing_audio_to_spectrogram(var_path_one_file_str = var_path_train_normal_breath_wav, test_var = test_var)
+  spectr_2 = func_preprocesing_audio_to_spectrogram(var_path_one_file_str = var_path_train_not_normal_breath_wav, test_var = test_var)
+  '''
+
+  file_contents = tf.io.read_file(var_path_one_file_str)
+  wav, sample_rate = tf.audio.decode_wav(file_contents, desired_channels=1)
+  wav = tf.squeeze(wav, axis=-1)
+  sample_rate = tf.cast(sample_rate, dtype=tf.int64)
+  wav_16000hz = tfio.audio.resample(wav, rate_in=sample_rate, rate_out=16000)
+
+  wav_1 = wav_16000hz[:test_var]
+  zero_padding_1 = tf.zeros([test_var] - tf.shape(wav_1), dtype=tf.float32)
+  wav_1 = tf.concat([zero_padding_1, wav_1],0)
+  spectrogram_1 = tf.signal.stft(wav_1, frame_length=320, frame_step=32)
+  spectrogram_1 = tf.abs(spectrogram_1)
+  spectrogram_1 = tf.expand_dims(spectrogram_1, axis=2)
+
+  return spectrogram_1
+
+test_var = 32000
+spectr_1 = func_preprocesing_audio_to_spectrogram(var_path_one_file_str = var_path_train_normal_breath_wav, test_var = test_var)
+spectr_2 = func_preprocesing_audio_to_spectrogram(var_path_one_file_str = var_path_train_not_normal_breath_wav, test_var = test_var)
+
+
+class PrepareDataAudioFile:
+  def __init__(self, patch_input_folder, patch_output_folder):
+    self.patch_input_folder = patch_input_folder  # папка с файлами которые надо обработать
+    self.patch_output_folder = patch_output_folder  # папка с файлами которые надо обработать
+
+  def prepare_audio_file_tensor_flow(self):
+    # заходим в основную папку и создаем список подпапок
+    # Use os.listdir() to get a list of all files and directories in the folder
+    var_name_folders_list = os.listdir(self.pach_input_folder)
+
+    for var_name_folder_str in var_name_folders_list:
+
+      var_path_to_under_folder_str = str(self.pach_input_folder) + '/' + str(var_name_folder_str)
+      var_path_to_under_folder_str = str(var_path_to_under_folder_str)
+
+      var_name_file_list = os.listdir(var_path_to_under_folder_str)
+
+      # оставим в списке файлов только те которые заканчиваются на mp3
+      var_name_mp3_file_list = [file for file in var_name_file_list if file.endswith('.mp3')]
+      # оставим в списке файлов только те которые заканчиваются на mp3
+      var_name_wav_file_list = [file for file in var_name_file_list if file.endswith('.wav')]
+
+      # ДЛЯ СПИСКА С wav
+      for var_name_file_str in var_name_wav_file_list:
+        var_path_to_file_str = str(self.pach_input_folder) + '/' + str(var_name_folder_str) + '/' + str(
+          var_name_file_str)
+        var_path_to_output_order_and_file_str = str(self.pach_output_folder) + '/' + str(
+          var_name_folder_str) + '/' + str(var_name_file_str)
+
+        var_path_to_file_str = str(var_path_to_file_str)
+        var_path_to_output_order_and_file_str = str(var_path_to_output_order_and_file_str)
+
+        var_object_audio = convert_to_16000_hrz(file_for_processing_to_16000_hrz=var_path_to_file_str)
+
+        var_object_for_writh_to_google_drive = SaveResults(name_object_for_save=var_object_audio,
+                                                           patch_output_folder=var_path_to_output_order_and_file_str)
+
+        # ДЛЯ СПИСКА С mp3
+      for var_name_file_str in var_name_mp3_file_list:
+        var_path_to_file_str = str(self.pach_input_folder) + '/' + str(var_name_folder_str) + '/' + str(
+          var_name_file_str)
+        var_path_to_output_order_and_file_str = str(self.pach_output_folder) + '/' + str(
+          var_name_folder_str) + '/' + str(var_name_file_str)
+
+        var_path_to_file_str = str(var_path_to_file_str)
+        var_path_to_output_order_and_file_str = str(var_path_to_output_order_and_file_str)
+
+        # del .mp3 from name file
+        var_name_file_without_mp3_or_wav = var_name_file_str[:-4]
+
+        var_convert_wav_file = convert_mp3_to_wav(var_pach_to_file=var_path_to_file_str,
+                                                  name_file_without_mp3_or_wav=var_name_file_without_mp3_or_wav)
+
+        var_object_audio = convert_to_16000_hrz(file_for_processing_to_16000_hrz=var_convert_wav_file)
+
+        var_object_for_writh_to_google_drive = SaveResults(name_object_for_save=var_object_audio,
+                                                           patch_output_folder=var_path_to_output_order_and_file_str)
+
+  def convert_to_16000_hrz(file_for_processing_to_16000_hrz):
+    '''
+    !pip install tensorflow_io
+
+    from pydub import AudioSegment
+    import os
+    from IPython import display
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    import tensorflow as tf
+    import tensorflow_hub as hub
+    import tensorflow_io as tfio
+    '''
+
+    file_contents = tf.io.read_file(file_for_processing_to_16000_hrz)
+    wav, sample_rate = tf.audio.decode_wav(file_contents, desired_channels=1)
+    wav = tf.squeeze(wav, axis=-1)
+    sample_rate = tf.cast(sample_rate, dtype=tf.int64)
+    wav = tfio.audio.resample(wav, rate_in=sample_rate, rate_out=16000)
+    return wav
+
+  def convert_mp3_to_wav(var_pach_to_file, name_file_without_mp3_or_wav):
+    """
+    !pip install pydub ffmpeg-python
+    from pydub import AudioSegment
+    """
+    # Convert it to WAV format
+    audio = AudioSegment.from_mp3(var_pach_to_file)
+    wav_file = name_file_without_mp3_or_wav + ".wav"
+    audio.export(wav_file, format="wav")
+    return wav_file
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
